@@ -2,6 +2,8 @@ import numpy as np
 from tensorly.decomposition import tucker
 import tensorly as tl
 import math
+from scipy.linalg import null_space
+from itertools import product
 
 def prod(arg):
     """ returns the product of elements in arg.
@@ -407,7 +409,6 @@ def silrtc(x, omega=None, alpha=None, gamma=None, max_iter=100, epsilon=1e-5, pr
 
 
 
-
 class Bandit:
     def __init__(self, dimensions=[2,2]) -> None:
         self.dimensions = np.array(dimensions)
@@ -422,8 +423,36 @@ class Bandit:
         return determ_reward + noise
 
 
+# def margin_mult(A, B, dim_ind):
+#     tensor_shape = list(A.shape)
+#     tensor_shape[dim_ind] = B.shape[dim_ind]
+#     print(tensor_shape)
+#     result_tensor = np.zeros(tensor_shape)
+#     for i1 in range(B.shape[dim_ind]):
+#         selected_slice_A = np.take(A, indices=[...], axis=dim_ind)
+#         sum_elem = 0
+#         for j in range(A.shape[dim_ind]):
+#             sum_elem += selected_slice_A[j] * B[i1, j]
+#             print(sum_elem)
+
+
+#     return result_tensor
+    
+
+# def marginal_multiplication(X, Y, axis):
+#     result = np.tensordot(X, Y, axes=([axis], [0]))
+#     result = np.moveaxis(result, len(result.shape) - 1, axis)
+#     return result
+    
+def marginal_multiplication(X, Y, k):
+    X_new = np.moveaxis(X, k, 0)
+    result =  np.einsum('i...,ij->j...', X_new, Y)
+    result = np.moveaxis(result, 0, k)
+    return result
+
+
 class TensorElimination:
-    def __init__(self, dimensions=[2,2], total_steps=10, explore_steps=5, lambda1=1, lambda2=1, conf_int_len=0.5, ranks=[1,1]) -> None:
+    def __init__(self, dimensions=[4,4], total_steps=10, explore_steps=5, lambda1=1, lambda2=1, conf_int_len=0.5, ranks=[2,2]) -> None:
         self.bandit  = Bandit(dimensions)
         self.dimensions = dimensions
         self.total_steps = total_steps
@@ -434,6 +463,7 @@ class TensorElimination:
         self.ranks = ranks
         self.Reward_vec_est = np.zeros(dimensions)
         self.have_info = np.zeros(dimensions).astype(bool)
+        self.all_arms = set(product(*list(map(lambda x: list(range(x)), self.dimensions))))
 
     def ExploreStep(self, arm):
         reward = self.bandit.PlayArm(arm)
@@ -447,8 +477,11 @@ class TensorElimination:
     def ExploitStep(self, arm):
         reward = self.bandit.PlayArm(arm)
 
+    
+
 
     def PlayAlgo(self):
+        #exploration
         for step in range(self.explore_steps):
             arm = np.random.randint(0, high=self.dimensions, size=len(self.dimensions))
             print(arm)
@@ -460,9 +493,33 @@ class TensorElimination:
         Rew_vec_completed = silrtc(Tensor(Rew_vec_ini), omega=self.have_info)
         Rew_vec_completed = Rew_vec_completed.data
         print(Rew_vec_completed)
-        core, factors = tucker(Rew_vec_completed, rank=[2, 3])
-        print(core)
+        core, factors = tucker(Rew_vec_completed, rank=self.ranks)
+        print(core.shape)
         print(factors)
+        perp_factors = []
+        X_res = core
+        ind = 0
+        for factor in factors:
+            perp_factor = null_space(factor.T)
+            perp_factors.append(perp_factor)
+            print(factor.shape)
+            print("X_res", X_res.shape)
+            print(X_res)
+            X_res = marginal_multiplication(X_res, factor, ind)
+            ind += 1
+        # print(perp_factors)
+        q = np.prod(self.dimensions) - np.prod(np.array(self.dimensions) - np.array(self.ranks))
+        print(q)
+        print(X_res)
+        print(Rew_vec_completed)
+        print(np.all(np.isclose(X_res, Rew_vec_completed, atol=1e-5)))
+        #reduction
+
+        
+        # print(self.all_arms)
+        # for k in np.log2(self.total_steps):
+
+
 
 
 
