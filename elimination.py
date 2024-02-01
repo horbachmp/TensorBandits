@@ -439,16 +439,16 @@ class Bandit:
 #     return result_tensor
     
 
-# def marginal_multiplication(X, Y, axis):
-#     result = np.tensordot(X, Y, axes=([axis], [0]))
-#     result = np.moveaxis(result, len(result.shape) - 1, axis)
-#     return result
-    
-def marginal_multiplication(X, Y, k):
-    X_new = np.moveaxis(X, k, 0)
-    result =  np.einsum('i...,ij->j...', X_new, Y)
-    result = np.moveaxis(result, 0, k)
+def marginal_multiplication(X, Y, axis):
+    result = np.tensordot(X, Y, axes=([axis], [1]))
+    result = np.moveaxis(result, len(result.shape) - 1, axis)
     return result
+    
+# def marginal_multiplication(X, Y, k):
+#     X_new = np.moveaxis(X, k, 0)
+#     result =  np.einsum('i...,ij->j...', X_new, Y)
+#     result = np.moveaxis(result, 0, k)
+#     return result
 
 
 class TensorElimination:
@@ -489,13 +489,10 @@ class TensorElimination:
             print(self.Reward_vec_est)
         # print(np.prod(self.dimensions), self.explore_steps)
         Rew_vec_ini = (np.prod(self.dimensions) / self.explore_steps) * self.Reward_vec_est
-        print(Rew_vec_ini)
         Rew_vec_completed = silrtc(Tensor(Rew_vec_ini), omega=self.have_info)
         Rew_vec_completed = Rew_vec_completed.data
         print(Rew_vec_completed)
         core, factors = tucker(Rew_vec_completed, rank=self.ranks)
-        print(core.shape)
-        print(factors)
         perp_factors = []
         X_res = core
         ind = 0
