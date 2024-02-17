@@ -408,54 +408,53 @@ def silrtc(x, omega=None, alpha=None, gamma=None, max_iter=100, epsilon=1e-5, pr
     print('SiLRTC ends: total iterations = {0}   difference = {1}\n\n'.format(k + 1, errList[k]))
     return x
 
-
+def L_inf_norm(tensor):
+    return np.sum(np.abs(tensor))
 
 class Bandit:
-    def __init__(self, dimensions=[2,2]) -> None:
+    def __init__(self, dimensions, ranks) -> None:
         self.dimensions = np.array(dimensions)
+        self.ranks = ranks
         # self.X = np.random.uniform(0, 1, self.dimensions)
-        self.X = np.zeros(self.dimensions)
+        # self.X = np.zeros(self.dimensions)
+        self.X = np.random.rand(*self.dimensions)
+        core, factors = tucker(self.X, rank=self.ranks)
+        # print(self.X)
+        X = core
+        ind = 0
+        for factor in factors:
+            X = marginal_multiplication(X, factor, ind)
+            ind += 1
+        # print(X)
+        # X = np.abs(X)
+
+        # linf_norm = L_inf_norm(X)
+        # self.X = X / (1.2 * linf_norm)
+        # print(self.X)
+        # print(L_inf_norm(self.X))
+        self.X = X
+
+
 
 
     def PlayArm(self, index):
         arm_tensor = np.zeros(self.dimensions, dtype=int)
         arm_tensor[tuple(index)] = 1
         determ_reward = np.sum(self.X * arm_tensor)
-        noise = np.random.normal(np.sum(index) * 10, 1, 1)
-        return determ_reward + noise
-
-
-# def margin_mult(A, B, dim_ind):
-#     tensor_shape = list(A.shape)
-#     tensor_shape[dim_ind] = B.shape[dim_ind]
-#     print(tensor_shape)
-#     result_tensor = np.zeros(tensor_shape)
-#     for i1 in range(B.shape[dim_ind]):
-#         selected_slice_A = np.take(A, indices=[...], axis=dim_ind)
-#         sum_elem = 0
-#         for j in range(A.shape[dim_ind]):
-#             sum_elem += selected_slice_A[j] * B[i1, j]
-#             print(sum_elem)
-
-
-#     return result_tensor
+        noise = np.random.normal(0, 1, 1)
+        # return determ_reward + noise
+        return np.array([determ_reward])
     
 
 def marginal_multiplication(X, Y, axis):
     result = np.tensordot(X, Y, axes=([axis], [1]))
     result = np.moveaxis(result, len(result.shape) - 1, axis)
     return result
-    
-# def marginal_multiplication(X, Y, k):
-#     X_new = np.moveaxis(X, k, 0)
-#     result =  np.einsum('i...,ij->j...', X_new, Y)
-#     result = np.moveaxis(result, 0, k)
-#     return result
 
 
 class TensorElimination:
-    def __init__(self, dimensions=[5, 5, 5], total_steps=1000, explore_steps=50, lambda1=2.0, lambda2=1.0, conf_int_len=0.05, ranks=[2,2, 2]) -> None:
-        self.bandit  = Bandit(dimensions)
+    def __init__(self, dimensions=[5, 5], total_steps=3000000, explore_steps=20000, lambda1=20.0, lambda2=20.0, conf_int_len=0.1, ranks=[3,3]) -> None:
+        self.bandit  = Bandit(dimensions, ranks)
         self.dimensions = dimensions
         self.total_steps = total_steps
         self.explore_steps = explore_steps
@@ -521,6 +520,7 @@ class TensorElimination:
         Rew_vec_ini = (np.prod(self.dimensions) / self.steps_done) * self.Reward_vec_est
         Rew_vec_completed = silrtc(Tensor(Rew_vec_ini), omega=self.have_info)
         Rew_vec_completed = Rew_vec_completed.data
+        print("----------------------------------------------------------------------------------", Rew_vec_completed)
         core, factors = tucker(Rew_vec_completed, rank=self.ranks)
         self.factors = factors
         perp_factors = []
@@ -557,11 +557,9 @@ class TensorElimination:
             print(arm)
             self.ExploreStep(arm)
             print(self.Reward_vec_est)
-        # print(np.prod(self.dimensions), self.explore_steps)
         Rew_vec_ini = (np.prod(self.dimensions) / self.explore_steps) * self.Reward_vec_est
         Rew_vec_completed = silrtc(Tensor(Rew_vec_ini), omega=self.have_info)
         Rew_vec_completed = Rew_vec_completed.data
-        print(Rew_vec_completed)
         core, factors = tucker(Rew_vec_completed, rank=self.ranks)
         self.factors = factors
         perp_factors = []
@@ -578,7 +576,7 @@ class TensorElimination:
         arr = np.concatenate((np.full(self.q, self.lambda1), np.full((np.prod(self.dimensions)) - self.q, self.lambda2)))
         self.V_t = np.diag(arr)
         self.V_t_inv = np.linalg.inv(self.V_t)
-        print("Q", self.q)
+        # print("Q", self.q)
         self.perp_factors = perp_factors
 
         #reduction
@@ -609,6 +607,7 @@ class TensorElimination:
                 upper_bounds.append((value + delta, arm))
             curr_max = np.max(lower_bounds)
             print("БЫЛО РУЧЕК", len(self.all_arms))
+            print(curr_max)
             self.all_arms = {pair[1] for pair in upper_bounds if pair[0] > curr_max}
             print("СТАЛО РУЧЕК", len(self.all_arms))
             if (len(self.all_arms) == 1):
@@ -616,6 +615,14 @@ class TensorElimination:
                 print("Лучшая ручка:", self.all_arms)
                 print("Затрачено шагов:", self.steps_done)
                 break
+            
+            self.UpdateEstimation()
+        print("Finished")
+        print(self.all_arms)
+        print(self.bandit.X)
+        print(np.argmax(self.bandit.X))
+        index = np.unravel_index(np.argmax(self.bandit.X), self.bandit.X.shape)
+        print(index)
 
 
             # updating
@@ -628,8 +635,13 @@ class TensorElimination:
 
 
 def main():
+    # seed = 42
+    # np.random.seed(seed)
+    
     algo = TensorElimination()
     algo.PlayAlgo()
+    
+    # bandit = Bandit([3,3], [2,2])
     
 
 main()
