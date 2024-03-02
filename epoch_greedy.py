@@ -76,9 +76,9 @@ class Tensor(object):
         self.shape = shape
         self.data = data.reshape(shape, order='F')
         self.ndims = len(self.shape)
-        print(self.data)
-        print(self.shape)
-        print(self.ndims)
+        # print(self.data)
+        # print(self.shape)
+        # print(self.ndims)
 
     def __str__(self):
         string = "Tensor of size {0} with {1} elements.\n".format(self.shape, prod(self.shape))
@@ -383,8 +383,8 @@ def silrtc(x, omega=None, alpha=None, gamma=None, max_iter=100, epsilon=1e-5, pr
     tau = alpha / gamma
 
     for k in range(max_iter):
-        if (k + 1) % printitn == 0 and k != 0 and printitn != max_iter:
-            print('SiLRTC: iterations = {0}   difference = {1}\n'.format(k, errList[k - 1]))
+        # if (k + 1) % printitn == 0 and k != 0 and printitn != max_iter:
+            # print('SiLRTC: iterations = {0}   difference = {1}\n'.format(k, errList[k - 1]))
 
         Xsum = 0
         for i in range(N):
@@ -405,7 +405,7 @@ def silrtc(x, omega=None, alpha=None, gamma=None, max_iter=100, epsilon=1e-5, pr
             errList = errList[0:(k + 1)]
             break
 
-    print('SiLRTC ends: total iterations = {0}   difference = {1}\n\n'.format(k + 1, errList[k]))
+    # print('SiLRTC ends: total iterations = {0}   difference = {1}\n\n'.format(k + 1, errList[k]))
     return x
 
 def L_inf_norm(tensor):
@@ -442,9 +442,8 @@ class Bandit:
         arm_tensor[tuple(index)] = 1
         determ_reward = np.sum(self.X * arm_tensor)
         noise = np.random.normal(0, 1, 1)
-        # print(noise)
         # return determ_reward + noise
-        return np.array([determ_reward + noise[0]/10])
+        return np.array([determ_reward + noise / 10])
     
 
 def marginal_multiplication(X, Y, axis):
@@ -453,8 +452,8 @@ def marginal_multiplication(X, Y, axis):
     return result
 
 
-class TensorElimination:
-    def __init__(self, dimensions=[5, 5], total_steps=30000, explore_steps=20000, lambda1=0.01, lambda2=20.0, conf_int_len=0.05, ranks=[3,3]) -> None:
+class TensorEpochGreedy:
+    def __init__(self, dimensions=[5, 5], total_steps=3000, explore_steps=100, lambda1=20.0, lambda2=20.0, conf_int_len=0.1, ranks=[3,3]) -> None:
         self.bandit  = Bandit(dimensions, ranks)
         self.dimensions = dimensions
         self.total_steps = total_steps
@@ -465,23 +464,16 @@ class TensorElimination:
         self.ranks = ranks
         self.Reward_vec_est = np.zeros(dimensions)
         self.Reward_vec_sum = np.zeros(dimensions)
-        self.Reward_vec_est_UUT = np.zeros(dimensions)
         self.have_info = np.zeros(dimensions).astype(bool)
         self.num_pulls = np.zeros(dimensions)
         self.all_arms = set(product(*list(map(lambda x: list(range(x)), self.dimensions))))
         self.factors = list()
-        self.perp_factors = list()
-        self.q = 0
-        arr = np.concatenate((np.full(self.q, lambda1), np.full((np.prod(self.dimensions)) - self.q, lambda2)))
-        self.V_t = np.diag(arr)
-        self.V_t_inv = np.linalg.inv(self.V_t)
         self.steps_done = 0
-        self.curr_beta = 0
 
     def ExploreStep(self, arm):
         self.steps_done += 1
         reward = self.bandit.PlayArm(arm)
-        print(reward)
+        print("reward", reward)
         arm_tensor = np.zeros(self.dimensions, dtype=int)
         arm_tensor[tuple(arm)] = 1
         self.Reward_vec_sum += arm_tensor * reward
@@ -492,7 +484,6 @@ class TensorElimination:
     def ExploitStep(self, arm):
         self.steps_done += 1
         reward = self.bandit.PlayArm(arm)
-        print(reward)
         arm_tensor = np.zeros(self.dimensions, dtype=int)
         arm_tensor[tuple(arm)] = 1
         self.Reward_vec_sum += arm_tensor * reward
@@ -505,141 +496,80 @@ class TensorElimination:
         for i in range(len(ind)):
             vec_e = np.zeros(self.dimensions[i])
             vec_e[ind[i]] = 1
-            vec_e_U = (np.concatenate((self.factors[i], self.perp_factors[i]), axis=1).T) @ vec_e
-            arm = np.outer(arm, vec_e_U)
+            arm = np.outer(arm, vec_e)
         if vectorise:
             return arm.ravel().reshape(-1,1)
         return arm
 
 
     def FindBestCurrArm(self):
-        norms = list()
-        arms = list(self.all_arms)
-        for arm in arms:
-            arm_vec = self.CreateArmTensorByIndex(arm)
-            norms.append(np.sqrt((arm_vec.T) @ self.V_t_inv @ (arm_vec)))
-        return arms[np.argmax(norms)]
+        ind = np.argmax(self.Reward_vec_est)
+        ind = np.unravel_index(ind, self.Reward_vec_est.shape)
+        return ind
 
 
     def UpdateEstimation(self):
-        Rew_vec_ini = self.Reward_vec_sum / self.num_pulls
+        tmp_num_pulls = self.num_pulls
+        tmp_num_pulls[tmp_num_pulls == 0] = 1
+        Rew_vec_ini = self.Reward_vec_sum / tmp_num_pulls
         Rew_vec_completed = silrtc(Tensor(Rew_vec_ini), omega=self.have_info)
         Rew_vec_completed = Rew_vec_completed.data
-        print("----------------------------------------------------------------------------------", Rew_vec_completed)
+        print("----------------------------------------------------------------------------------")
         core, factors = tucker(Rew_vec_completed, rank=self.ranks)
         self.factors = factors
-        perp_factors = []
         ind = 0
-        self.Reward_vec_est = Rew_vec_completed
-        self.Reward_vec_est_UUT = Rew_vec_completed
+        self.Reward_vec_est = core
         for factor in factors:
-            perp_factor = null_space(factor.T)
-            perp_factors.append(perp_factor)
-            vec_e_U = (np.concatenate((factor, perp_factor), axis=1).T)
-            self.Reward_vec_est_UUT = marginal_multiplication(self.Reward_vec_est_UUT, vec_e_U, ind)
+            self.Reward_vec_est = marginal_multiplication(self.Reward_vec_est, factor, ind)
             ind += 1
-        # print(perp_factors)
-        self.q = np.prod(self.dimensions) - np.prod(np.array(self.dimensions) - np.array(self.ranks))
-        arr = np.concatenate((np.full(self.q, self.lambda1), np.full((np.prod(self.dimensions)) - self.q, self.lambda2)))
-        self.V_t = np.diag(arr)
-        self.V_t_inv = np.linalg.inv(self.V_t)
-        self.perp_factors = perp_factors
 
-
-    def FindBestBeta(self, arm_tesnors, rewards):
-        #временно сделаем вид, что лямбды равны и заюзаем готовую регрессию, потом напишу свою
-        print(len(arm_tesnors), arm_tesnors[0].shape)
-        print(len(rewards), rewards[0].shape)
-        new_arm_tesnors = np.array(arm_tesnors)
-        new_arm_tesnors[:,:self.q] *= self.lambda1
-        new_arm_tesnors[:,self.q:] *= self.lambda2
-        ridge_reg = Ridge(alpha=1, fit_intercept=False)
-        ridge_reg.fit(arm_tesnors, rewards)
-        self.curr_beta = ridge_reg.coef_[0]
-        return self.curr_beta
+        print(self.Reward_vec_est)
+        
 
 
     def PlayAlgo(self):
         #exploration
         for step in range(self.explore_steps):
             arm = np.random.randint(0, high=self.dimensions, size=len(self.dimensions))
-            print(arm)
+            print("curr_arm", arm)
             self.ExploreStep(arm)
-            # print(self.Reward_vec_est)
-        Rew_vec_ini = self.Reward_vec_sum / self.num_pulls
+            # print("Estimation", self.Reward_vec_est)
+        tmp_num_pulls = self.num_pulls
+        tmp_num_pulls[tmp_num_pulls == 0] = 1
+        Rew_vec_ini = self.Reward_vec_sum / tmp_num_pulls
         Rew_vec_completed = silrtc(Tensor(Rew_vec_ini), omega=self.have_info)
         Rew_vec_completed = Rew_vec_completed.data
         core, factors = tucker(Rew_vec_completed, rank=self.ranks)
         self.factors = factors
-        perp_factors = []
         ind = 0
-        self.Reward_vec_est = Rew_vec_completed
-        self.Reward_vec_est_UUT = Rew_vec_completed
+        self.Reward_vec_est = core
         for factor in factors:
-            perp_factor = null_space(factor.T)
-            perp_factors.append(perp_factor)
-            vec_e_U = (np.concatenate((factor, perp_factor), axis=1).T)
-            self.Reward_vec_est_UUT = marginal_multiplication(self.Reward_vec_est_UUT, vec_e_U, ind)
+            self.Reward_vec_est = marginal_multiplication(self.Reward_vec_est, factor, ind)
             ind += 1
-        # print(perp_factors)
-        self.q = np.prod(self.dimensions) - np.prod(np.array(self.dimensions) - np.array(self.ranks))
-        arr = np.concatenate((np.full(self.q, self.lambda1), np.full((np.prod(self.dimensions)) - self.q, self.lambda2)))
-        self.V_t = np.diag(arr)
-        self.V_t_inv = np.linalg.inv(self.V_t)
-        # print("Q", self.q)
-        self.perp_factors = perp_factors
 
-        #reduction
+
+        # #reduction
 
         
         for k in range(int(np.log2(self.total_steps))):
-            rewards = list()
-            played_arms = list()
-            for iter in range(5):
-                current_arm = self.FindBestCurrArm()
-                current_arm_tensor = self.CreateArmTensorByIndex(current_arm)
-                played_arms.append(current_arm_tensor[:, 0])
-                print("CURRENT ARM", current_arm)
-                reward = self.ExploitStep(current_arm)
-                rewards.append(reward)
-                print("reward", reward)
-                self.V_t += current_arm_tensor @ current_arm_tensor.T
-                self.V_t_inv = np.linalg.inv(self.V_t)
-            # eliminating
-            self.FindBestBeta(played_arms, rewards)
-            lower_bounds = list()
-            upper_bounds = list()
-            for arm in self.all_arms:
-                arm_tensor = self.CreateArmTensorByIndex(arm)
-                value = np.dot(self.curr_beta, arm_tensor)
-                delta = self.conf_int_len * np.sqrt((arm_tensor.T) @ self.V_t_inv @ (arm_tensor))
-                lower_bounds.append(value - delta)
-                upper_bounds.append((value + delta, arm))
-            curr_max = np.max(lower_bounds)
-            print("БЫЛО РУЧЕК", len(self.all_arms))
-            print(self.all_arms)
-            print(curr_max)
-            self.all_arms = {pair[1] for pair in upper_bounds if pair[0] > curr_max}
-            print("СТАЛО РУЧЕК", len(self.all_arms))
-            if (len(self.all_arms) == 1):
-                print("-------------------------------------------------------------------------------------------------------------------------------")
-                print("Лучшая ручка:", self.all_arms)
-                print("Затрачено шагов:", self.steps_done)
-                break
+
+            current_arm = self.FindBestCurrArm()
+            current_arm_tensor = self.CreateArmTensorByIndex(current_arm)
+            print("CURRENT ARM", current_arm)
+            reward = self.ExploitStep(current_arm)
+            print("reward", reward)
             
             self.UpdateEstimation()
         print("Finished")
-        print("Real rewards tensor:", self.bandit.X)
-        print("Rewards tensor estimation:", self.Reward_vec_est)
-        print("All arms left", self.all_arms)
+        # print(self.bandit.X)
+        # print(np.argmax(self.bandit.X), )
         index = np.unravel_index(np.argmax(self.bandit.X), self.bandit.X.shape)
         print("real best arm:", index, np.max(self.bandit.X))
-
-        # if len(self.all_arms) == 1:
-        print("estimated best arms:")
-        for arm in self.all_arms:
-            print(arm, self.bandit.X[arm])
-
+        best_arm = self.FindBestCurrArm()
+        print("estimated best arm:", best_arm, self.bandit.X[best_arm])
+        
+        print(self.bandit.X)
+        print(self.Reward_vec_est)
 
 
 
@@ -652,7 +582,7 @@ def main():
     # seed = 42
     # np.random.seed(seed)
     
-    algo = TensorElimination()
+    algo = TensorEpochGreedy()
     algo.PlayAlgo()
     
     # bandit = Bandit([3,3], [2,2])
