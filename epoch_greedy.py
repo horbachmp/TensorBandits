@@ -443,7 +443,7 @@ class Bandit:
         determ_reward = np.sum(self.X * arm_tensor)
         noise = np.random.normal(0, 1, 1)
         # return determ_reward + noise
-        return np.array([determ_reward + noise / 10])
+        return np.array([determ_reward + noise])
     
 
 def marginal_multiplication(X, Y, axis):
@@ -453,7 +453,7 @@ def marginal_multiplication(X, Y, axis):
 
 
 class TensorEpochGreedy:
-    def __init__(self, dimensions=[5, 5], total_steps=3000, explore_steps=100, lambda1=20.0, lambda2=20.0, conf_int_len=0.1, ranks=[3,3]) -> None:
+    def __init__(self, dimensions=[5, 5], total_steps=300000, explore_steps=10000, lambda1=20.0, lambda2=20.0, conf_int_len=0.1, ranks=[3,3]) -> None:
         self.bandit  = Bandit(dimensions, ranks)
         self.dimensions = dimensions
         self.total_steps = total_steps

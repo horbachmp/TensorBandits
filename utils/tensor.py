@@ -64,9 +64,9 @@ class Tensor(object):
         self.shape = shape
         self.data = data.reshape(shape, order='F')
         self.ndims = len(self.shape)
-        print(self.data)
-        print(self.shape)
-        print(self.ndims)
+        # print(self.data)
+        # print(self.shape)
+        # print(self.ndims)
 
     def __str__(self):
         string = "Tensor of size {0} with {1} elements.\n".format(self.shape, prod(self.shape))
@@ -371,8 +371,8 @@ def silrtc(x, omega=None, alpha=None, gamma=None, max_iter=100, epsilon=1e-5, pr
     tau = alpha / gamma
 
     for k in range(max_iter):
-        if (k + 1) % printitn == 0 and k != 0 and printitn != max_iter:
-            print('SiLRTC: iterations = {0}   difference = {1}\n'.format(k, errList[k - 1]))
+        # if (k + 1) % printitn == 0 and k != 0 and printitn != max_iter:
+            # print('SiLRTC: iterations = {0}   difference = {1}\n'.format(k, errList[k - 1]))
 
         Xsum = 0
         for i in range(N):
@@ -393,5 +393,5 @@ def silrtc(x, omega=None, alpha=None, gamma=None, max_iter=100, epsilon=1e-5, pr
             errList = errList[0:(k + 1)]
             break
 
-    print('SiLRTC ends: total iterations = {0}   difference = {1}\n\n'.format(k + 1, errList[k]))
+    # print('SiLRTC ends: total iterations = {0}   difference = {1}\n\n'.format(k + 1, errList[k]))
     return x

@@ -63,18 +63,12 @@ class Vect_UCB_1():
         print("real R", self.bandit.X)
         print("estimated", estimation)
 
-
-
-
-
 def main():
     # seed = 42
     # np.random.seed(seed)
     bandit = TensorBandit(dimensions=[5,5], ranks=[3,3])
     algo = Vect_UCB_1(bandit=bandit)
     algo.PlayAlgo()
-    
-    # bandit = Bandit([3,3], [2,2])
     
 
 main()

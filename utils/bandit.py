@@ -22,4 +22,5 @@ class TensorBandit:
         arm_tensor[tuple(index)] = 1
         determ_reward = np.sum(self.X * arm_tensor)
         noise = np.random.normal(0, 1, 1)
+        print(determ_reward, noise[0])
         return np.array([determ_reward + noise[0]])
