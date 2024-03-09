@@ -7,46 +7,7 @@ from itertools import product
 from sklearn.linear_model import Ridge
 
 from utils.tensor import *
-
-
-
-class TensorBandit:
-    def __init__(self, dimensions, ranks) -> None:
-        self.dimensions = np.array(dimensions)
-        self.ranks = ranks
-        # self.X = np.random.uniform(0, 1, self.dimensions)
-        # self.X = np.zeros(self.dimensions)
-        self.X = np.random.rand(*self.dimensions)
-        core, factors = tucker(self.X, rank=self.ranks)
-        # print(self.X)
-        X = core
-        ind = 0
-        for factor in factors:
-            X = marginal_multiplication(X, factor, ind)
-            ind += 1
-        # print(X)
-        # X = np.abs(X)
-
-        # linf_norm = L_inf_norm(X)
-        # self.X = X / (1.2 * linf_norm)
-        # print(self.X)
-        # print(L_inf_norm(self.X))
-        self.X = X
-
-
-
-
-    def PlayArm(self, index):
-        arm_tensor = np.zeros(self.dimensions, dtype=int)
-        arm_tensor[tuple(index)] = 1
-        determ_reward = np.sum(self.X * arm_tensor)
-        noise = np.random.normal(0, 1, 1)
-        # print(noise)
-        # return determ_reward + noise
-        return np.array([determ_reward + noise[0]/10])
-    
-
-
+from utils.bandit import *
 
 
 class TensorElimination:
@@ -239,6 +200,58 @@ class TensorElimination:
 
 
 
+class Vect_UCB_1():
+    def __init__(self, bandit, total_steps=3000, explore_steps=200) -> None:
+        self.bandit  = bandit
+        self.total_steps = total_steps
+        self.explore_steps = explore_steps
+        self.steps_done = 0
+        self.curr_beta = 0
+        self.Reward_vec_sum = np.zeros(self.bandit.dimensions)
+        self.have_info = np.zeros(self.bandit.dimensions).astype(bool)
+        self.num_pulls = np.zeros(self.bandit.dimensions)
+
+    def ExploreStep(self, arm):
+        self.steps_done += 1
+        reward = self.bandit.PlayArm(arm)
+        print(reward)
+        arm_tensor = np.zeros(self.bandit.dimensions, dtype=int)
+        arm_tensor[tuple(arm)] = 1
+        self.Reward_vec_sum += arm_tensor * reward
+        self.have_info = self.have_info | arm_tensor
+        self.num_pulls += arm_tensor
+
+
+    def ExploitStep(self, arm):
+        self.steps_done += 1
+        reward = self.bandit.PlayArm(arm)
+        print(reward)
+        arm_tensor = np.zeros(self.bandit.dimensions, dtype=int)
+        arm_tensor[tuple(arm)] = 1
+        self.Reward_vec_sum += arm_tensor * reward
+        self.have_info = self.have_info | arm_tensor
+        self.num_pulls += arm_tensor
+        return reward
+    
+
+    def FindBestCurrArm(self):
+        estimation = self.Reward_vec_sum / self.num_pulls + np.sqrt(2 * np.log(self.steps_done) / self.num_pulls)
+        index = np.unravel_index(np.argmax(estimation), estimation.shape)
+        return index
+    
+    def PlayAlgo(self):
+        for step in range(self.explore_steps):
+            arm = np.random.randint(0, high=self.bandit.dimensions, size=len(self.bandit.dimensions))
+            print(arm)
+            self.ExploreStep(arm)
+        for step in range(self.total_steps - self.explore_steps):
+            arm = self.FindBestCurrArm()
+            self.ExploitStep(arm)
+        print(self.FindBestCurrArm())
+        estimation = self.Reward_vec_sum / self.num_pulls + np.sqrt(2 * np.log(self.steps_done) / self.num_pulls)
+        print("real argmax", np.unravel_index(np.argmax(estimation), estimation.shape))
+        print("real R", self.bandit.X)
+        print("estimated", estimation)
 
 
 
@@ -247,8 +260,8 @@ class TensorElimination:
 def main():
     # seed = 42
     # np.random.seed(seed)
-    
-    algo = TensorElimination()
+    bandit = TensorBandit(dimensions=[5,5], ranks=[3,3])
+    algo = Vect_UCB_1(bandit=bandit)
     algo.PlayAlgo()
     
     # bandit = Bandit([3,3], [2,2])
