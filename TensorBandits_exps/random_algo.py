@@ -14,7 +14,7 @@ class Random():
         self.delete_arm_on_step = delete_arm_on_step
         self.all_arms = set(product(*list(map(lambda x: list(range(x)), self.dimensions))))
 
-    def ExploreStep(self, arm):
+    def Step(self, arm):
         reward = self.bandit.PlayArm(arm)
 
     
@@ -44,7 +44,7 @@ class Random():
             arm = np.random.randint(0, high=self.dimensions, size=len(self.dimensions))
             while tuple(arm) not in self.all_arms:
                 arm = np.random.randint(0, high=self.dimensions, size=len(self.dimensions))
-            self.ExploreStep(arm)
+            self.Step(arm)
 
         self.bandit.PlotRegret(self.img_name)
 

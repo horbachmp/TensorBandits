@@ -41,17 +41,7 @@ class TensorElimination:
         self.update_arm_on_step = update_arm_on_step
         self.delete_arm_on_step = delete_arm_on_step
 
-    def ExploreStep(self, arm):
-        self.steps_done += 1
-        reward = self.bandit.PlayArm(arm)
-        arm_tensor = np.zeros(self.dimensions, dtype=int)
-        arm_tensor[tuple(arm)] = 1
-        self.Reward_vec_sum += arm_tensor * reward
-        self.have_info = self.have_info | arm_tensor
-        self.num_pulls += arm_tensor
-
-
-    def ExploitStep(self, arm):
+    def Step(self, arm):
         self.steps_done += 1
         reward = self.bandit.PlayArm(arm)
         arm_tensor = np.zeros(self.dimensions, dtype=int)
@@ -139,7 +129,7 @@ class TensorElimination:
             arm = np.random.randint(0, high=self.dimensions, size=len(self.dimensions))
             while tuple(arm) not in self.all_arms:
                 arm = np.random.randint(0, high=self.dimensions, size=len(self.dimensions))
-            self.ExploreStep(arm)
+            self.Step(arm)
         self.UpdateEstimation()
         updated = False
         deleted = False
@@ -156,7 +146,7 @@ class TensorElimination:
                 current_arm = self.FindBestCurrArm()
                 current_arm_tensor = self.CreateArmTensorByIndex(current_arm)
                 played_arms.append(current_arm_tensor[:, 0])
-                reward = self.ExploitStep(current_arm)
+                reward = self.Step(current_arm)
                 rewards.append(reward)
                 self.V_t += current_arm_tensor @ current_arm_tensor.T
                 self.V_t_inv = np.linalg.inv(self.V_t)

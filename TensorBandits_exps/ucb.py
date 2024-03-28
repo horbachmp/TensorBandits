@@ -21,17 +21,7 @@ class Vect_UCB_1():
         self.delete_arm_on_step = delete_arm_on_step
         self.all_arms = set(product(*list(map(lambda x: list(range(x)), self.dimensions))))
 
-    def ExploreStep(self, arm):
-        self.steps_done += 1
-        reward = self.bandit.PlayArm(arm)
-        arm_tensor = np.zeros(self.dimensions, dtype=int)
-        arm_tensor[tuple(arm)] = 1
-        self.Reward_vec_sum += arm_tensor * reward
-        self.have_info = self.have_info | arm_tensor
-        self.num_pulls += arm_tensor
-
-
-    def ExploitStep(self, arm):
+    def Step(self, arm):
         self.steps_done += 1
         reward = self.bandit.PlayArm(arm)
         arm_tensor = np.zeros(self.dimensions, dtype=int)
@@ -67,7 +57,7 @@ class Vect_UCB_1():
             arm = np.random.randint(0, high=self.dimensions, size=len(self.dimensions))
             while tuple(arm) not in self.all_arms:
                 arm = np.random.randint(0, high=self.dimensions, size=len(self.dimensions))
-            self.ExploreStep(arm)
+            self.Step(arm)
         updated = False
         deleted = False
         for step in range(self.explore_steps, self.total_steps):
@@ -78,7 +68,7 @@ class Vect_UCB_1():
                 deleted = True
                 self.DeleteArms(0, 2)
             arm = self.FindBestCurrArm()
-            self.ExploitStep(arm)
+            self.Step(arm)
         best_arm = self.FindBestCurrArm()
         print("Best combination: title -", best_arm[0]+1, "subtitle -", best_arm[1] + 1, "picture -", best_arm[2] + 1)
 

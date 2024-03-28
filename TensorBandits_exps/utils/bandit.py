@@ -36,4 +36,4 @@ class TensorBandit:
         plt.plot(self.regrets)
         if img_name is not None:
             plt.savefig(img_name)
-        plt.show()
+        # plt.show()
