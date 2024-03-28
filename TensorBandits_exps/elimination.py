@@ -123,6 +123,31 @@ class TensorElimination:
                 self.all_arms.remove(arm)
 
 
+    def GetArmsRatings(self, unknown_threshold=7):
+        sorted_indices = [tuple(np.unravel_index(x, self.Reward_vec_est.shape)) for x in np.argsort(self.Reward_vec_est, axis=None)]
+        is_determined = self.num_pulls > unknown_threshold
+        unknown = np.where(is_determined == False)
+        unknown_indices = set(zip(*unknown))
+        ratings = {}
+        filtered_indices = []
+        for arm in sorted_indices:
+            if arm in unknown_indices:
+                ratings[arm] = 0
+            else:
+                filtered_indices.append(arm)
+        length = len(filtered_indices)
+        one_class_num = length // 5
+        curr_class = 5
+        curr_class_num = one_class_num
+        for i in range(len(filtered_indices) - 1, -1, -1):
+            ratings[filtered_indices[i]] = curr_class
+            curr_class_num -= 1
+            if curr_class_num == 0 and curr_class > 1:
+                curr_class -= 1
+                curr_class_num = one_class_num
+        print(ratings)
+
+
 
     def PlayAlgo(self):
         for step in range(self.explore_steps):
@@ -175,8 +200,7 @@ class TensorElimination:
             self.UpdateEstimation()
         best_arm = self.FindBestCurrArm()
         print("Best combination: title -", best_arm[0]+1, "subtitle -", best_arm[1] + 1, "picture -", best_arm[2] + 1)
-        
-
+        self.GetArmsRatings()
 
         self.bandit.PlotRegret(self.img_name)
 
@@ -199,7 +223,7 @@ def main():
              [1.2, 0.6, 0.6],
              [1.5, 0.9, 0.9 ]]])
     bandit = TensorBandit(X, 0.5)
-    algo = TensorElimination(dimensions=[3,3,3], ranks=[2,2,2], bandit=bandit, img_name="elimination_upd4000_del6000", delete_arm_on_step=6000, update_arm_on_step=4000)
+    algo = TensorElimination(dimensions=[3,3,3], ranks=[2,2,2], bandit=bandit)
     algo.PlayAlgo()
     
     

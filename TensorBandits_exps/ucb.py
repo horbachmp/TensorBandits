@@ -52,6 +52,33 @@ class Vect_UCB_1():
         index = np.unravel_index(np.argmax(estimation), estimation.shape)
         return index
     
+
+    def GetArmsRatings(self, unknown_threshold=7):
+        estimation = self.Reward_vec_sum / (self.num_pulls + 1e-9)
+        sorted_indices = [tuple(np.unravel_index(x, estimation.shape)) for x in np.argsort(estimation, axis=None)]
+        is_determined = self.num_pulls > unknown_threshold
+        unknown = np.where(is_determined == False)
+        unknown_indices = set(zip(*unknown))
+        ratings = {}
+        filtered_indices = []
+        for arm in sorted_indices:
+            if arm in unknown_indices:
+                ratings[arm] = 0
+            else:
+                filtered_indices.append(arm)
+        length = len(filtered_indices)
+        one_class_num = length // 5
+        curr_class = 5
+        curr_class_num = one_class_num
+        for i in range(len(filtered_indices) - 1, -1, -1):
+            ratings[filtered_indices[i]] = curr_class
+            curr_class_num -= 1
+            if curr_class_num == 0 and curr_class > 1:
+                curr_class -= 1
+                curr_class_num = one_class_num
+        print(ratings)
+
+    
     def PlayAlgo(self):
         for step in range(self.explore_steps):
             arm = np.random.randint(0, high=self.dimensions, size=len(self.dimensions))
@@ -71,7 +98,7 @@ class Vect_UCB_1():
             self.Step(arm)
         best_arm = self.FindBestCurrArm()
         print("Best combination: title -", best_arm[0]+1, "subtitle -", best_arm[1] + 1, "picture -", best_arm[2] + 1)
-
+        self.GetArmsRatings()
         self.bandit.PlotRegret(self.img_name)
 
 def main():
