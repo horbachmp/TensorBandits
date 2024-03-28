@@ -12,7 +12,7 @@ from utils.bandit import *
 
 
 class TensorElimination:
-    def __init__(self, bandit, total_steps=30000000, explore_steps=20000, lambda1=0.01, lambda2=20.0, conf_int_len=0.3) -> None:
+    def __init__(self, bandit, total_steps=3000, explore_steps=200, lambda1=0.01, lambda2=20.0, conf_int_len=0.3) -> None:
         self.bandit  = bandit
         self.dimensions = self.bandit.dimensions
         self.total_steps = total_steps
@@ -125,10 +125,10 @@ class TensorElimination:
             self.ExploreStep(arm)
         self.UpdateEstimation()
 
-        for k in range(self.total_steps):
+        for k in range(0, self.total_steps, 50):
             rewards = list()
             played_arms = list()
-            for iter in range(500):
+            for iter in range(50):
                 current_arm = self.FindBestCurrArm()
                 current_arm_tensor = self.CreateArmTensorByIndex(current_arm)
                 played_arms.append(current_arm_tensor[:, 0])
@@ -167,11 +167,15 @@ class TensorElimination:
         print("All arms left", self.all_arms)
         index = np.unravel_index(np.argmax(self.bandit.X), self.bandit.X.shape)
         print("real best arm:", index, np.max(self.bandit.X))
-
+        arm = self.FindBestCurrArm()
+        print("best arm:", arm, self.bandit.X[arm])
         # if len(self.all_arms) == 1:
         print("estimated best arms:")
         for arm in self.all_arms:
             print(arm, self.bandit.X[arm])
+
+
+        self.bandit.PlotRegret()
 
 
 

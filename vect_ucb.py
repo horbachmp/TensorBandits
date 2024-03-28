@@ -63,6 +63,8 @@ class Vect_UCB_1():
         print("real R", self.bandit.X)
         print("estimated", estimation)
 
+        self.bandit.PlotRegret()
+
 def main():
     # seed = 42
     # np.random.seed(seed)

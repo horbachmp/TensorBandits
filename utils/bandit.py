@@ -1,6 +1,7 @@
 from utils.tensor import *
 from tensorly.decomposition import tucker
 import numpy as np
+import matplotlib.pyplot as plt
 
 class TensorBandit:
     def __init__(self, dimensions, ranks) -> None:
@@ -14,6 +15,8 @@ class TensorBandit:
             X = marginal_multiplication(X, factor, ind)
             ind += 1
         self.X = X
+        self.opt_arm_rew = np.max(X)
+        self.regrets = [0]
 
 
 
@@ -23,4 +26,12 @@ class TensorBandit:
         determ_reward = np.sum(self.X * arm_tensor)
         noise = np.random.normal(0, 1, 1)
         print(determ_reward, noise[0])
-        return np.array([determ_reward + noise[0]])
+        reward = determ_reward + noise[0]
+        regret = self.opt_arm_rew - reward
+        self.regrets.append(self.regrets[-1] + regret)
+        return np.array([reward])
+    
+    def PlotRegret(self):
+        print(len(self.regrets))
+        plt.plot(self.regrets)
+        plt.show()
