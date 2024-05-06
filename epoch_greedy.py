@@ -141,4 +141,5 @@ def main():
     # bandit = Bandit([3,3], [2,2])
     
 
-main()
+if __name__ == "__main__":
+    main()

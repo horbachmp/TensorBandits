@@ -80,7 +80,7 @@ class TensorElimination:
 
 
     def UpdateEstimation(self):
-        Rew_vec_ini = self.Reward_vec_sum / self.num_pulls
+        Rew_vec_ini = self.Reward_vec_sum /  np.where(self.num_pulls == 0, 1, self.num_pulls)
         Rew_vec_completed = silrtc(Tensor(Rew_vec_ini), omega=self.have_info)
         Rew_vec_completed = Rew_vec_completed.data
         print("----------------------------------------------------------------------------------", Rew_vec_completed)
@@ -188,11 +188,12 @@ class TensorElimination:
 def main():
     # seed = 42
     # np.random.seed(seed)
-    bandit = TensorBandit(dimensions=[5,5], ranks=[3,3])
+    bandit = TensorBandit(dimensions=[20,20, 20], ranks=[7,7,7])
     algo = TensorElimination(bandit)
     algo.PlayAlgo()
     
     # bandit = Bandit([3,3], [2,2])
     
 
-main()
+if __name__ == "__main__":
+    main()
