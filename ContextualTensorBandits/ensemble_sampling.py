@@ -8,11 +8,18 @@ from itertools import product
 from sklearn.linear_model import Ridge
 import itertools
 import random
+from copy import deepcopy
+
 
 from utils.tensor import *
 from utils.bandit import *
 
-
+def normalize(matrix):
+        norm = np.sqrt(np.sum(matrix**2))
+        if norm == 0:
+            return matrix
+        else:
+            return matrix / norm
 
 class EnsembleSampling:
     def __init__(self, dimensions, ranks, bandit, num_context_dims, prior_mus, prior_sigmas, perturb_noise, num_models=5, total_steps=20000, img_name=None, update_arm_on_step=None, delete_arm_on_step=None, print_every=100) -> None:
@@ -69,6 +76,8 @@ class EnsembleSampling:
                 row = curr_U[row_index].reshape(1,-1)
                 curr_S = marginal_multiplication(curr_S, row, h)
         return curr_S
+    
+    
 
 
     def PlayAlgo(self):
@@ -84,6 +93,13 @@ class EnsembleSampling:
                 model.append(U_k)
             self.models.append(model)
         self.zero_step_models = self.models.copy()
+        #init phase
+        for _ in range(10):
+            arm = np.random.randint(0, high=self.dimensions, size=len(self.dimensions))
+            for i, c in enumerate(arm):
+                self.arm_history[i].append(c)
+            perturb_reward = self.Step(arm)
+            self.reward_history.append(perturb_reward[0])
 
         arm = np.random.randint(0, high=self.dimensions, size=len(self.dimensions))
         for i, c in enumerate(arm):
@@ -93,7 +109,8 @@ class EnsembleSampling:
         # exploitation
         for step in range(self.total_steps):
             model_idx = random.randint(0, self.num_models - 1)
-            curr_model = self.models[model_idx]
+            new_models = deepcopy(self.models)
+            curr_model = self.models[model_idx]     
             for U_index, curr_U in enumerate(curr_model[1:]):
                 for row_index,  row in enumerate(curr_U):
                     first_part = np.eye(row.shape[0])
@@ -105,12 +122,34 @@ class EnsembleSampling:
                             second_part += v * self.reward_history[s]
                     first_part /= self.prior_sigmas[U_index][row_index] ** 2
                     second_part /= self.prior_sigmas[U_index][row_index] ** 2
-                    self.models[model_idx][U_index + 1][row_index] = np.linalg.inv(first_part) @ second_part
+                    # print("hi", first_part)
+                    
+                    new_models[model_idx][U_index + 1][row_index] = np.linalg.inv(first_part) @ second_part
+                new_models[model_idx][U_index + 1] = np.apply_along_axis(normalize,0,new_models[model_idx][U_index + 1])
+                # if U_index == 0:
+                #     print(new_models[model_idx][U_index + 1])
+            self.models = new_models
+            
             self.Reward_vec_est = self.Reward_vec_sum / np.where(self.num_pulls == 0, 1, self.num_pulls)
-            new_S = self.Reward_vec_est
-            for U_index, curr_U in enumerate(curr_model[1:]):
-                U = np.concatenate([row.T for row in curr_U])
-                new_S = marginal_multiplication(new_S, U.T, U_index)
+            first_part = np.zeros_like(self.models[model_idx][0])
+            second_part = np.zeros((first_part.shape[0], 1))
+            for s in range(len(self.reward_history)):
+                v = deepcopy(self.models[model_idx][1][self.arm_history[0][s]])
+                for j in range(2, len(self.models[model_idx])):
+                    v *= self.models[model_idx][j][self.arm_history[j - 1][s]]
+                first_part += v @ v.T
+                second_part += v * self.reward_history[s]
+            # print(first_part)
+            # print(second_part)
+            new_S = np.linalg.inv(first_part) * second_part
+            # new_S = np.linalg.inv(first_part)
+            # print(new_S)
+            # print(first_part.shape)
+            # print(new_S.shape)
+            # new_s = self.Reward_vec_est 
+            # for U_index, curr_U in enumerate(curr_model[1:]):
+            #     U = np.concatenate([row.T for row in curr_U])
+            #     new_S = marginal_multiplication(new_S, U.T, U_index)
             self.models[model_idx][0] = new_S
             # generate new arm
             context_dims = self.dimensions[:self.num_context_dims]
@@ -133,6 +172,8 @@ class EnsembleSampling:
             if (step + 1) % self.print_every == 0:
                 print("ITERATION", step + 1)
                 print(R_estim)
+                # for U in self.models[model_idx][1:]:
+                #     print(np.sqrt(np.sum(U**2)))
                 print(np.unravel_index(np.argmax(R_estim[0]), R_estim[0].shape))
                 print(np.unravel_index(np.argmax(R_estim[1]), R_estim[1].shape))
                 print(np.unravel_index(np.argmax(R_estim[2]), R_estim[2].shape))
@@ -184,7 +225,7 @@ def main():
     # X = np.random.normal(mean, std, size=(100, 10))
     bandit = TensorBandit(X, 0.5)
     dimensions=[3,3,3]
-    ranks=[2,2,2]
+    ranks=[1,1,1]
     mus = []
     sigmas = []
     for k in range(len(dimensions)):
