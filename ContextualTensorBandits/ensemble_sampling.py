@@ -225,7 +225,7 @@ def main():
     # X = np.random.normal(mean, std, size=(100, 10))
     bandit = TensorBandit(X, 0.5)
     dimensions=[3,3,3]
-    ranks=[1,1,1]
+    ranks=[2,2,2]
     mus = []
     sigmas = []
     for k in range(len(dimensions)):
