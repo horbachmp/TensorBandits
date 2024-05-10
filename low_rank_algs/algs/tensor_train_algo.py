@@ -1,22 +1,15 @@
 import numpy as np
 from tensorly.decomposition import tucker
 from tensorly.decomposition import tensor_train
-import tensorly as tl
-import math
-from scipy.linalg import null_space
-from itertools import product
-from sklearn.linear_model import Ridge
-import itertools
+from tqdm import tqdm
 
-
-from utils.tensor import *
-from utils.bandit import *
+from utils.bandit import TensorBandit
 from utils.tt_utils import optima_tt_max, tt_sum, get_tensor_from_tt
-
+from utils.tensor import silrtc, Tensor
 
 
 class TensorTrainAlgo:
-    def __init__(self, dimensions, ranks, bandit, total_steps=2000, explore_steps=400, k=3, update_each=50, img_name=None) -> None:
+    def __init__(self, dimensions, ranks, bandit, total_steps=500, explore_steps=200, k=10, update_each=50, img_name=None) -> None:
         self.bandit  = bandit
         self.dimensions = dimensions
         self.ranks = ranks
@@ -46,13 +39,18 @@ class TensorTrainAlgo:
 
     def FindBestCurrArm(self):
         arm = tuple(optima_tt_max(self.cores, self.k, self.ranks))
+        # print(arm)
         return arm
 
 
     def UpdateEstimation(self):
         current_estimation = self.Reward_vec_sum / np.where(self.num_pulls == 0, 1, self.num_pulls)
-        print(self.curr_step)
-        print(current_estimation)
+        # current_estimation = get_tensor_from_tt(self.cores)
+        current_estimation = silrtc(Tensor(current_estimation), omega=np.where(self.num_pulls > 0, 1, 0)).data
+        # print(self.curr_step)
+        # print(current_estimation)
+        # print("real", np.unravel_index(np.argmax(current_estimation), current_estimation.shape))
+        # print(np.max(np.abs(current_estimation - self.bandit.X)))
         self.cores = tensor_train(current_estimation, rank=self.ranks)
 
 
@@ -88,9 +86,10 @@ class TensorTrainAlgo:
             arm = np.random.randint(0, high=self.dimensions, size=len(self.dimensions))
             reward = self.Step(arm)
         estimation = self.Reward_vec_sum / np.where(self.num_pulls == 0, 1, self.num_pulls)
+        estimation = silrtc(Tensor(estimation), omega=np.where(self.num_pulls > 0, 1, 0)).data
         self.cores = tensor_train(estimation, rank=self.ranks)
 
-        for step in range(self.explore_steps + 1, self.total_steps + 1):
+        for step in tqdm(range(self.explore_steps + 1, self.total_steps + 1)):
             self.curr_step += 1
             current_arm = self.FindBestCurrArm()
             current_arm_tensor = self.CreateArmTensorByIndex(current_arm)
@@ -108,6 +107,7 @@ class TensorTrainAlgo:
             
         best_arm = self.FindBestCurrArm()
         print("Best arm:", best_arm)
+        print(self.bandit.X[best_arm])
 
         # self.bandit.PlotRegret(self.img_name)
 
@@ -119,19 +119,25 @@ class TensorTrainAlgo:
 def main():
     seed = 42
     np.random.seed(seed)
-    X = np.array([    # title, subtitle, picture
-            [[2.9, 2.3, 2.3],
-             [2.7, 2.1, 2.1],
-             [3.6, 2.4, 2.4]],
-            [[3.4, 3.4, 2.8],
-             [3.2, 2.6, 2.6],
-             [3.5, 2.9, 2.9]],
-            [[1.4, 0.8, 0.8],
-             [1.2, 0.6, 0.6],
-             [1.5, 0.9, 0.9 ]]])
+    # X = np.array([    # title, subtitle, picture
+    #         [[2.9, 2.3, 2.3],
+    #          [2.7, 2.1, 2.1],
+    #          [3.6, 2.4, 2.4]],
+    #         [[3.4, 3.4, 2.8],
+    #          [3.2, 2.6, 2.6],
+    #          [3.5, 2.9, 2.9]],
+    #         [[1.4, 0.8, 0.8],
+    #          [1.2, 0.6, 0.6],
+    #          [1.5, 0.9, 0.9 ]]])
+    dimensions = [10, 10, 10]
+    X = np.random.rand(*dimensions)
+    print(X)
     bandit = TensorBandit(X, 0.5)
-    algo = TensorTrainAlgo(dimensions=[3,3,3], ranks=[1,2,2,1], bandit=bandit) # ranks should be of len(dims) + 1 and starts and ends with 1
+    algo = TensorTrainAlgo(dimensions=dimensions, ranks=[1,3,3,1], bandit=bandit) # ranks should be of len(dims) + 1 and starts and ends with 1
     algo.PlayAlgo()
+    real_best = np.unravel_index(np.argmax(X), X.shape)
+    print("real best arm:",  real_best)
+    print(X[real_best])
     
     
 

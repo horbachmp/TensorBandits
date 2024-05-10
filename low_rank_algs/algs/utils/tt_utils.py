@@ -44,6 +44,10 @@ def top_k_rows(matrix, k):
 
 
 def optima_tt_max(cores, k=2, rank=2):
+    shape_list = []
+    for c in cores:
+        shape_list.append(c.shape[1])
+    k = min(k, min(shape_list))
     need_restructure = False
     for core in cores:
         if max(core.shape) > core.shape[1]:

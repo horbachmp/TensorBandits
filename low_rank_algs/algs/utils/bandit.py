@@ -1,4 +1,5 @@
 from utils.tensor import *
+
 from tensorly.decomposition import tucker
 import numpy as np
 import matplotlib.pyplot as plt
@@ -37,3 +38,6 @@ class TensorBandit:
         if img_name is not None:
             plt.savefig(img_name)
         # plt.show()
+    
+    def GetRegrets(self):
+        return self.regrets

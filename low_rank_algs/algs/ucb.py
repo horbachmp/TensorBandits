@@ -1,5 +1,6 @@
 import numpy as np
 from itertools import product
+from tqdm import tqdm
 
 from utils.tensor import *
 from utils.bandit import *
@@ -87,7 +88,7 @@ class Vect_UCB_1():
             self.Step(arm)
         updated = False
         deleted = False
-        for step in range(self.explore_steps, self.total_steps):
+        for step in tqdm(range(self.explore_steps, self.total_steps)):
             if self.update_arm_on_step is not None and not updated and step >= self.update_arm_on_step:
                 updated = True
                 self.UpdateArms(2, 2, 0.6)
@@ -97,9 +98,10 @@ class Vect_UCB_1():
             arm = self.FindBestCurrArm()
             self.Step(arm)
         best_arm = self.FindBestCurrArm()
-        print("Best combination: title -", best_arm[0]+1, "subtitle -", best_arm[1] + 1, "picture -", best_arm[2] + 1)
-        self.GetArmsRatings()
-        self.bandit.PlotRegret(self.img_name)
+        print("Best arm", best_arm)
+        print(self.bandit.X[best_arm])
+        # self.GetArmsRatings()
+        # self.bandit.PlotRegret(self.img_name)
 
 def main():
     seed = 42

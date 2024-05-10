@@ -5,7 +5,7 @@ import math
 from scipy.linalg import null_space
 from itertools import product
 from sklearn.linear_model import Ridge
-import itertools
+from tqdm import tqdm
 
 
 from utils.tensor import *
@@ -73,7 +73,7 @@ class TensorElimination:
 
 
     def UpdateEstimation(self):
-        Rew_vec_ini = self.Reward_vec_sum / self.num_pulls
+        Rew_vec_ini = self.Reward_vec_sum / np.where(self.num_pulls == 0, 1, self.num_pulls)
         Rew_vec_completed = silrtc(Tensor(Rew_vec_ini), omega=self.have_info)
         Rew_vec_completed = Rew_vec_completed.data
         core, factors = tucker(Rew_vec_completed, rank=self.ranks)
@@ -158,7 +158,7 @@ class TensorElimination:
         self.UpdateEstimation()
         updated = False
         deleted = False
-        for step in range(self.explore_steps, self.total_steps, 50):
+        for step in tqdm(range(self.explore_steps, self.total_steps, 50)):
             if self.update_arm_on_step is not None and not updated and step >= self.update_arm_on_step:
                 updated = True
                 self.UpdateArms(2, 2, 0.6)
@@ -199,10 +199,11 @@ class TensorElimination:
             
             self.UpdateEstimation()
         best_arm = self.FindBestCurrArm()
-        print("Best combination: title -", best_arm[0]+1, "subtitle -", best_arm[1] + 1, "picture -", best_arm[2] + 1)
-        self.GetArmsRatings()
+        print("Best arm", best_arm)
+        print(self.bandit.X[best_arm])
+        # self.GetArmsRatings()
 
-        self.bandit.PlotRegret(self.img_name)
+        # self.bandit.PlotRegret(self.img_name)
 
 
 
