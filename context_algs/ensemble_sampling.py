@@ -22,7 +22,7 @@ def normalize(matrix):
             return matrix / norm
 
 class EnsembleSampling:
-    def __init__(self, dimensions, ranks, bandit, num_context_dims, prior_mus, prior_sigmas, perturb_noise, num_models=5, total_steps=20000, img_name=None, update_arm_on_step=None, delete_arm_on_step=None, print_every=100) -> None:
+    def __init__(self, dimensions, ranks, bandit, num_context_dims, prior_mus, prior_sigmas, perturb_noise, num_models=5, total_steps=5000, img_name=None, print_every=100) -> None:
         self.bandit  = bandit
         self.dimensions = dimensions
         self.ranks = ranks
@@ -40,20 +40,14 @@ class EnsembleSampling:
             self.arm_history.append([])
         self.reward_history = list()
 
-        # self.conf_int_len = conf_int_len
         self.Reward_vec_est = np.zeros(self.dimensions)
         self.Reward_vec_sum = np.zeros(self.dimensions)
-        # self.Reward_vec_est_UUT = np.zeros(self.dimensions)
-        # self.have_info = np.zeros(self.dimensions).astype(bool)
         self.num_pulls = np.zeros(self.dimensions)
         self.print_every = print_every
-        # self.img_name = img_name
-        # self.update_arm_on_step = update_arm_on_step
-        # self.delete_arm_on_step = delete_arm_on_step
 
     def Step(self, arm):
         # self.steps_done += 1
-        reward = self.bandit.PlayArm(arm)
+        reward = self.bandit.PlayArm(arm, arm[:self.num_context_dims])
         noise = np.random.normal(0, self.perturb_noise)
         noise_reward = reward + noise
         arm_tensor = np.zeros(self.dimensions, dtype=int)
@@ -89,12 +83,15 @@ class EnsembleSampling:
                 U_k = []
                 for i in range(self.dimensions[k]):
                     row = np.random.multivariate_normal(self.prior_mus[k][i], self.prior_sigmas[k][i] * np.eye(len(self.prior_mus[k][i])))
-                    U_k.append(row)
+                    U_k.append(row[np.newaxis, :])
+                U_k = np.concatenate(U_k, axis=0)
+                U_k, _ = np.linalg.qr(U_k)
                 model.append(U_k)
             self.models.append(model)
         self.zero_step_models = self.models.copy()
+
         #init phase
-        for _ in range(10):
+        for _ in range(500):
             arm = np.random.randint(0, high=self.dimensions, size=len(self.dimensions))
             for i, c in enumerate(arm):
                 self.arm_history[i].append(c)
@@ -122,44 +119,24 @@ class EnsembleSampling:
                             second_part += v * self.reward_history[s]
                     first_part /= self.prior_sigmas[U_index][row_index] ** 2
                     second_part /= self.prior_sigmas[U_index][row_index] ** 2
-                    # print("hi", first_part)
                     
-                    new_models[model_idx][U_index + 1][row_index] = np.linalg.inv(first_part) @ second_part
-                new_models[model_idx][U_index + 1] = np.apply_along_axis(normalize,0,new_models[model_idx][U_index + 1])
-                # if U_index == 0:
-                #     print(new_models[model_idx][U_index + 1])
+                    new_models[model_idx][U_index + 1][row_index] = (np.linalg.pinv(first_part) @ second_part)[:,0]
+                # new_models[model_idx][U_index + 1] = np.apply_along_axis(normalize,0,new_models[model_idx][U_index + 1])
+                new_models[model_idx][U_index + 1], _ = np.linalg.qr(new_models[model_idx][U_index + 1])
             self.models = new_models
-            
             self.Reward_vec_est = self.Reward_vec_sum / np.where(self.num_pulls == 0, 1, self.num_pulls)
-            first_part = np.zeros_like(self.models[model_idx][0])
-            second_part = np.zeros((first_part.shape[0], 1))
-            for s in range(len(self.reward_history)):
-                v = deepcopy(self.models[model_idx][1][self.arm_history[0][s]])
-                for j in range(2, len(self.models[model_idx])):
-                    v *= self.models[model_idx][j][self.arm_history[j - 1][s]]
-                first_part += v @ v.T
-                second_part += v * self.reward_history[s]
-            # print(first_part)
-            # print(second_part)
-            new_S = np.linalg.inv(first_part) * second_part
-            # new_S = np.linalg.inv(first_part)
-            # print(new_S)
-            # print(first_part.shape)
-            # print(new_S.shape)
-            # new_s = self.Reward_vec_est 
-            # for U_index, curr_U in enumerate(curr_model[1:]):
-            #     U = np.concatenate([row.T for row in curr_U])
-            #     new_S = marginal_multiplication(new_S, U.T, U_index)
+            # print("rewards:", self.Reward_vec_est)
+            first_part = self.Reward_vec_est
+            for U_ind in range(1, len(self.models[model_idx])):
+                first_part = marginal_multiplication(first_part, self.models[model_idx][U_ind].T, U_ind-1)
+            new_S = first_part
             self.models[model_idx][0] = new_S
             # generate new arm
             context_dims = self.dimensions[:self.num_context_dims]
             context = np.array([random.randint(0, dim - 1) for dim in context_dims])
             R_estim = self.models[model_idx][0]
-            i = 0
-            for U in self.models[model_idx][1:]:
-                U_final = np.concatenate([row.T for row in U])
-                R_estim = marginal_multiplication(R_estim, U_final, i)
-                i += 1
+            for U_ind in range(1, len(self.models[model_idx])):
+                R_estim = marginal_multiplication(R_estim, self.models[model_idx][U_ind], U_ind-1)
             R = R_estim
             for x in context:
                 R = R[x]
@@ -170,7 +147,7 @@ class EnsembleSampling:
             perturb_reward = self.Step(arm)
             self.reward_history.append(perturb_reward[0])
             if (step + 1) % self.print_every == 0:
-                print("ITERATION", step + 1)
+                print("ITERATION", step + 1,"model num:", model_idx)
                 print(R_estim)
                 # for U in self.models[model_idx][1:]:
                 #     print(np.sqrt(np.sum(U**2)))
@@ -181,6 +158,7 @@ class EnsembleSampling:
         print(np.unravel_index(np.argmax(R_estim[0]), R_estim[0].shape))
         print(np.unravel_index(np.argmax(R_estim[1]), R_estim[1].shape))
         print(np.unravel_index(np.argmax(R_estim[2]), R_estim[2].shape))
+        self.bandit.PlotRegret("/home/maryna/HSE/Bandits/TensorBandits/context_algs/ens_samp_givenX_only.png")
 
             
 
@@ -221,7 +199,6 @@ def main():
              [1.2, 0.6, 0.6],
              [1.5, 0.9, 0.9 ]]])
     dimensions=[3,3,3]
-    ranks=[2,2,2]
     # X = np.random.normal(mean, std, size=(100, 10))
     bandit = TensorBandit(X, 0.5)
     dimensions=[3,3,3]
@@ -232,7 +209,7 @@ def main():
         comp_mus = []
         comp_sigmas = []
         for i in range(dimensions[k]):
-            row_mus = [0.] * ranks[i]
+            row_mus = [0.] * ranks[k]
             comp_mus.append(row_mus)
             comp_sigmas.append(1.)
         mus.append(comp_mus)

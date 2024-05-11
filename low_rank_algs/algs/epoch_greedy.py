@@ -79,7 +79,7 @@ class TensorEpochGreedy:
 
     def PlayAlgo(self):
         #exploration
-        for step in tqdm(range(self.explore_steps)):
+        for step in range(self.explore_steps):
             arm = np.random.randint(0, high=self.dimensions, size=len(self.dimensions))
             # print("curr_arm", arm)
             self.ExploreStep(arm)
@@ -97,7 +97,7 @@ class TensorEpochGreedy:
             self.Reward_vec_est = marginal_multiplication(self.Reward_vec_est, factor, ind)
             ind += 1
         # reduction
-        for k in range(self.explore_steps, self.total_steps):
+        for k in tqdm(range(self.explore_steps, self.total_steps)):
 
             current_arm = self.FindBestCurrArm()
             current_arm_tensor = self.CreateArmTensorByIndex(current_arm)
