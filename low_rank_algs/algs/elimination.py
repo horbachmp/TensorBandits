@@ -14,7 +14,7 @@ from utils.bandit import *
 
 
 class TensorElimination:
-    def __init__(self, dimensions, ranks, bandit, total_steps=20000, explore_steps=200, lambda1=0.01, lambda2=20.0, conf_int_len=0.3, img_name=None, update_arm_on_step=None, delete_arm_on_step=None) -> None:
+    def __init__(self, dimensions, ranks, bandit, total_steps=5000, explore_steps=1000, lambda1=0.01, lambda2=20.0, conf_int_len=0.3, img_name=None, update_arm_on_step=None, delete_arm_on_step=None) -> None:
         self.bandit  = bandit
         self.dimensions = dimensions
         self.ranks = ranks
@@ -203,7 +203,7 @@ class TensorElimination:
         print(self.bandit.X[best_arm])
         # self.GetArmsRatings()
 
-        # self.bandit.PlotRegret(self.img_name)
+        # self.bandit.PlotRegret(self.img_name, algo_name="Tensor Elimination", plot_random=False)
 
 
 
@@ -224,7 +224,7 @@ def main():
              [1.2, 0.6, 0.6],
              [1.5, 0.9, 0.9 ]]])
     bandit = TensorBandit(X, 0.5)
-    algo = TensorElimination(dimensions=[3,3,3], ranks=[2,2,2], bandit=bandit)
+    algo = TensorElimination(dimensions=[3,3,3], ranks=[2,2,2], bandit=bandit, img_name='/home/maryna/HSE/Bandits/TensorBandits/low_rank_algs/pictures/algs_new/elim_only.png')
     algo.PlayAlgo()
     
     

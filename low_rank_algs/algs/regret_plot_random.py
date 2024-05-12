@@ -22,7 +22,8 @@ def errorfill(x, y, yerr, label=None, color=None, alpha_fill=0.3, ax=None):
 
 
 def main():
-    dimensions = [10, 10, 10]
+    # dimensions = [10, 10, 10]
+    dimensions = [5, 5, 5]
     X = np.random.rand(*dimensions)
 
     real_best = np.unravel_index(np.argmax(X), X.shape)
@@ -111,10 +112,11 @@ def main():
     # plt.errorbar(range(len(mean_regrets_ep)), mean_regrets_ep, yerr=std_regrets_ep, label=f'TensorEpochGreedy (time: {np.mean(times_ep):.2f} sec)', alpha=0.5)
     # plt.errorbar(range(len(mean_regrets_ucb)), mean_regrets_ucb, yerr=std_regrets_ucb, label=f'Vect_UCB_1 (time: {np.mean(times_ucb):.2f} sec)', alpha=0.5, markeredgecolor='none')
 
-    errorfill(range(len(mean_regrets_tt)), mean_regrets_tt, yerr=std_regrets_tt, label=f'TensorTrainAlgo (time: {np.mean(times_tt):.2f} sec)')
-    errorfill(range(len(mean_regrets_elim)), mean_regrets_elim, yerr=std_regrets_elim, label=f'TensorElimination (time: {np.mean(times_elim):.2f} sec)')
+    
     errorfill(range(len(mean_regrets_ep)), mean_regrets_ep, yerr=std_regrets_ep, label=f'TensorEpochGreedy (time: {np.mean(times_ep):.2f} sec)')
     errorfill(range(len(mean_regrets_ucb)), mean_regrets_ucb, yerr=std_regrets_ucb, label=f'Vect_UCB_1 (time: {np.mean(times_ucb):.2f} sec)')
+    errorfill(range(len(mean_regrets_elim)), mean_regrets_elim, yerr=std_regrets_elim, label=f'TensorElimination (time: {np.mean(times_elim):.2f} sec)')
+    errorfill(range(len(mean_regrets_tt)), mean_regrets_tt, yerr=std_regrets_tt, label=f'TensorTrainAlgo (time: {np.mean(times_tt):.2f} sec)')
 
     
     plt.xlabel('Iteration')
@@ -124,7 +126,8 @@ def main():
 
     plt.grid(True)
 
-    plt.savefig('../compare_pictures/regrets_comparison_d_10_10_10_r_2_averaged.png')
+    # plt.savefig('../compare_pictures/regrets_comparison_d_10_10_10_r_2_averaged_5runs_new.png')
+    plt.savefig('../compare_pictures/regrets_comparison_d_5_5_5_r_2_averaged_5runs_new.png')
     plt.show()
 
 if __name__ == "__main__":

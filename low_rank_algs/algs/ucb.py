@@ -7,7 +7,7 @@ from utils.bandit import *
 
 
 class Vect_UCB_1():
-    def __init__(self, dimensions, bandit, total_steps=20000, explore_steps=200, img_name=None, update_arm_on_step=None, delete_arm_on_step=None) -> None:
+    def __init__(self, dimensions, bandit, total_steps=5000, explore_steps=1000, img_name=None, update_arm_on_step=None, delete_arm_on_step=None) -> None:
         self.dimensions = dimensions
         self.bandit  = bandit
         self.total_steps = total_steps
@@ -102,6 +102,7 @@ class Vect_UCB_1():
         print(self.bandit.X[best_arm])
         # self.GetArmsRatings()
         # self.bandit.PlotRegret(self.img_name)
+        # self.bandit.PlotRegret(self.img_name, algo_name="Vectorized UCB", plot_random=True)
 
 def main():
     seed = 42
@@ -117,7 +118,7 @@ def main():
              [1.2, 0.6, 0.6],
              [1.5, 0.9, 0.9 ]]])
     bandit = TensorBandit(X, 0.5)
-    algo = Vect_UCB_1(dimensions=[3,3,3], bandit=bandit, img_name="ucb_upd4000", update_arm_on_step=4000)
+    algo = Vect_UCB_1(dimensions=[3,3,3], bandit=bandit, img_name='/home/maryna/HSE/Bandits/TensorBandits/low_rank_algs/pictures/algs_new/ucb.png')
     algo.PlayAlgo()
 
 if __name__ == "__main__":
