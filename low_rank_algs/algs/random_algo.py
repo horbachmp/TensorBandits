@@ -1,5 +1,7 @@
 # import numpy as np
 from itertools import product
+from tqdm import tqdm
+
 from utils.tensor import *
 from utils.bandit import *
 
@@ -34,7 +36,7 @@ class Random():
     def PlayAlgo(self):
         updated = False
         deleted = False
-        for step in range(0, self.total_steps):
+        for step in tqdm(range(0, self.total_steps)):
             if self.update_arm_on_step is not None and not updated and step >= self.update_arm_on_step:
                 updated = True
                 self.UpdateArms(2, 2, 0.6)
@@ -46,7 +48,7 @@ class Random():
                 arm = np.random.randint(0, high=self.dimensions, size=len(self.dimensions))
             self.Step(arm)
 
-        self.bandit.PlotRegret(self.img_name)
+        # self.bandit.PlotRegret(self.img_name, algo_name="Random", plot_random=False)
 
 def main():
     seed = 42
@@ -62,7 +64,7 @@ def main():
              [1.2, 0.6, 0.6],
              [1.5, 0.9, 0.9 ]]])
     bandit = TensorBandit(X, 0.5)
-    algo = Random(dimensions=[3,3,3], bandit=bandit, img_name="random_upd4000", update_arm_on_step=4000)
+    algo = Random(dimensions=[3,3,3], bandit=bandit)
     algo.PlayAlgo()
 
 if __name__ == "__main__":

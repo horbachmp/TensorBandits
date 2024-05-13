@@ -27,7 +27,6 @@ class TensorEpochGreedy:
     def ExploreStep(self, arm):
         self.steps_done += 1
         reward = self.bandit.PlayArm(arm)
-        # print("reward", reward)
         arm_tensor = np.zeros(self.dimensions, dtype=int)
         arm_tensor[tuple(arm)] = 1
         self.Reward_vec_sum += arm_tensor * reward
@@ -82,9 +81,7 @@ class TensorEpochGreedy:
         #exploration
         for step in range(self.explore_steps):
             arm = np.random.randint(0, high=self.dimensions, size=len(self.dimensions))
-            # print("curr_arm", arm)
             self.ExploreStep(arm)
-            # print("Estimation", self.Reward_vec_est)
         tmp_num_pulls = self.num_pulls
         tmp_num_pulls[tmp_num_pulls == 0] = 1
         Rew_vec_ini = self.Reward_vec_sum / tmp_num_pulls
@@ -104,8 +101,6 @@ class TensorEpochGreedy:
             current_arm_tensor = self.CreateArmTensorByIndex(current_arm)
             reward = self.ExploitStep(current_arm)
             self.UpdateEstimation()
-        # print(self.bandit.X)
-        # print(np.argmax(self.bandit.X), )
         index = np.unravel_index(np.argmax(self.bandit.X), self.bandit.X.shape)
         best_arm = self.FindBestCurrArm()
         print("best arm:", best_arm)
@@ -116,8 +111,6 @@ class TensorEpochGreedy:
 
 
 def main():
-    # seed = 42
-    # np.random.seed(seed)
     X = np.array([    # title, subtitle, picture
             [[2.9, 2.3, 2.3],
              [2.7, 2.1, 2.1],
@@ -131,8 +124,6 @@ def main():
     bandit = TensorBandit(X, 0.5)
     algo = TensorEpochGreedy(dimensions=[3,3,3], ranks=[2,2,2], bandit=bandit, img_name='/home/maryna/HSE/Bandits/TensorBandits/low_rank_algs/pictures/algs_new/epoch_greedy_only.png')
     algo.PlayAlgo()
-    
-    # bandit = Bandit([3,3], [2,2])
     
 
 if __name__ == "__main__":

@@ -1,5 +1,4 @@
 import numpy as np
-from tensorly.decomposition import tucker
 from tensorly.decomposition import tensor_train
 from tqdm import tqdm
 
@@ -39,7 +38,6 @@ class TensorTrainAlgo:
 
     def FindBestCurrArm(self):
         arm = tuple(optima_tt_max(self.cores, self.k, self.ranks))
-        # print(arm)
         return arm
 
 
@@ -47,10 +45,6 @@ class TensorTrainAlgo:
         current_estimation = self.Reward_vec_sum / np.where(self.num_pulls == 0, 1, self.num_pulls)
         # current_estimation = get_tensor_from_tt(self.cores)
         current_estimation = silrtc(Tensor(current_estimation), omega=np.where(self.num_pulls > 0, 1, 0)).data
-        # print(self.curr_step)
-        # print(current_estimation)
-        # print("real", np.unravel_index(np.argmax(current_estimation), current_estimation.shape))
-        # print(np.max(np.abs(current_estimation - self.bandit.X)))
         self.cores = tensor_train(current_estimation, rank=self.ranks)
 
 
@@ -131,9 +125,8 @@ def main():
     #          [1.5, 0.9, 0.9 ]]])
     dimensions = [10, 10, 10]
     X = np.random.rand(*dimensions)
-    print(X)
     bandit = TensorBandit(X, 0.5)
-    algo = TensorTrainAlgo(dimensions=dimensions, ranks=[1,3,3,1], bandit=bandit) # ranks should be of len(dims) + 1 and starts and ends with 1
+    algo = TensorTrainAlgo(dimensions=dimensions, ranks=[1,3,3,1], bandit=bandit)
     algo.PlayAlgo()
     real_best = np.unravel_index(np.argmax(X), X.shape)
     print("real best arm:",  real_best)

@@ -1,7 +1,5 @@
 import numpy as np
 from tensorly.decomposition import tucker
-import tensorly as tl
-import math
 from scipy.linalg import null_space
 from itertools import product
 from sklearn.linear_model import Ridge
