@@ -39,28 +39,18 @@ class TensorBandit:
         self.random_regrets.append(self.random_regrets[-1]+random_regret)
         return np.array([reward])
     
-    
+    def GetRegrets(self):
+        return self.regrets
+
+
     # def PlotRegret(self, img_name=None):
     #     plt.plot(self.regrets, label='Ensemble Sampling')
-    #     plt.plot(self.random_regrets, label='Random Algorithm')
+    #     # plt.plot(self.random_regrets, label='Random Algorithm')
     #     plt.xlabel('Steps')
     #     plt.ylabel('Regret')
-    #     plt.title('Regret Plot for Ensemble Sampling and Random Algorithm')
-    #     plt.legend()
+    #     plt.title('Regret Plot for Ensemble Sampling')
+    #     # plt.legend()
     #     if img_name is not None:
     #         plt.savefig(img_name)
     #     else:
     #         plt.show()
-
-
-    def PlotRegret(self, img_name=None):
-        plt.plot(self.regrets, label='Ensemble Sampling')
-        # plt.plot(self.random_regrets, label='Random Algorithm')
-        plt.xlabel('Steps')
-        plt.ylabel('Regret')
-        plt.title('Regret Plot for Ensemble Sampling')
-        # plt.legend()
-        if img_name is not None:
-            plt.savefig(img_name)
-        else:
-            plt.show()

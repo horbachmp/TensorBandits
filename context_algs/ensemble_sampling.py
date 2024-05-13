@@ -1,14 +1,7 @@
 import numpy as np
-from tensorly.decomposition import tucker
-import torch
-import tensorly as tl
-import math
-from scipy.linalg import null_space
-from itertools import product
-from sklearn.linear_model import Ridge
-import itertools
 import random
 from copy import deepcopy
+from tqdm import tqdm
 
 
 from utils.tensor import *
@@ -22,7 +15,7 @@ def normalize(matrix):
             return matrix / norm
 
 class EnsembleSampling:
-    def __init__(self, dimensions, ranks, bandit, num_context_dims, prior_mus, prior_sigmas, perturb_noise, num_models=5, total_steps=5000, img_name=None, print_every=100) -> None:
+    def __init__(self, dimensions, ranks, bandit, num_context_dims, prior_mus, prior_sigmas, perturb_noise, num_models=5, total_steps=5000, explore_steps=1000, img_name=None, print_every=100) -> None:
         self.bandit  = bandit
         self.dimensions = dimensions
         self.ranks = ranks
@@ -34,6 +27,7 @@ class EnsembleSampling:
         self.models = []
         self.zero_step_models = []
         self.total_steps = total_steps
+        self.explore_steps = explore_steps
         self.vs = list()
         self.arm_history = list()
         for _ in self.dimensions:
@@ -91,7 +85,7 @@ class EnsembleSampling:
         self.zero_step_models = self.models.copy()
 
         #init phase
-        for _ in range(500):
+        for _ in range(self.explore_steps):
             arm = np.random.randint(0, high=self.dimensions, size=len(self.dimensions))
             for i, c in enumerate(arm):
                 self.arm_history[i].append(c)
@@ -104,7 +98,7 @@ class EnsembleSampling:
         perturb_reward = self.Step(arm)
         self.reward_history.append(perturb_reward[0])
         # exploitation
-        for step in range(self.total_steps):
+        for step in tqdm(range(self.explore_steps, self.total_steps)):
             model_idx = random.randint(0, self.num_models - 1)
             new_models = deepcopy(self.models)
             curr_model = self.models[model_idx]     
@@ -146,42 +140,19 @@ class EnsembleSampling:
                 self.arm_history[i].append(c)
             perturb_reward = self.Step(arm)
             self.reward_history.append(perturb_reward[0])
-            if (step + 1) % self.print_every == 0:
-                print("ITERATION", step + 1,"model num:", model_idx)
-                print(R_estim)
-                # for U in self.models[model_idx][1:]:
-                #     print(np.sqrt(np.sum(U**2)))
-                print(np.unravel_index(np.argmax(R_estim[0]), R_estim[0].shape))
-                print(np.unravel_index(np.argmax(R_estim[1]), R_estim[1].shape))
-                print(np.unravel_index(np.argmax(R_estim[2]), R_estim[2].shape))
-        print(R_estim)
-        print(np.unravel_index(np.argmax(R_estim[0]), R_estim[0].shape))
-        print(np.unravel_index(np.argmax(R_estim[1]), R_estim[1].shape))
-        print(np.unravel_index(np.argmax(R_estim[2]), R_estim[2].shape))
-        self.bandit.PlotRegret("/home/maryna/HSE/Bandits/TensorBandits/context_algs/ens_samp_givenX_only.png")
-
-            
-
-
-                        
-
-    #     self.all_arms = {pair[1] for pair in upper_bounds if pair[0] > curr_max}
-        #     # print("СТАЛО РУЧЕК", len(self.all_arms))
-        #     # if (len(self.all_arms) == 1):
-        #     #     print("-------------------------------------------------------------------------------------------------------------------------------")
-        #     #     print("Лучшая ручка:", self.all_arms)
-        #     #     print("Затрачено шагов:", self.steps_done)
-        #         # break
-            
-        #     self.UpdateEstimation()
-        # best_arm = self.FindBestCurrArm()
-        # print("Best combination: title -", best_arm[0]+1, "subtitle -", best_arm[1] + 1, "picture -", best_arm[2] + 1)
-        # self.GetArmsRatings()
-
-        # self.bandit.PlotRegret(self.img_name)
-
-
-
+            # if (step + 1) % self.print_every == 0:
+            #     print("ITERATION", step + 1,"model num:", model_idx)
+            #     print(R_estim)
+            #     # for U in self.models[model_idx][1:]:
+            #     #     print(np.sqrt(np.sum(U**2)))
+            #     print(np.unravel_index(np.argmax(R_estim[0]), R_estim[0].shape))
+            #     print(np.unravel_index(np.argmax(R_estim[1]), R_estim[1].shape))
+            #     print(np.unravel_index(np.argmax(R_estim[2]), R_estim[2].shape))
+        # print(R_estim)
+        # print(np.unravel_index(np.argmax(R_estim[0]), R_estim[0].shape))
+        # print(np.unravel_index(np.argmax(R_estim[1]), R_estim[1].shape))
+        # print(np.unravel_index(np.argmax(R_estim[2]), R_estim[2].shape))
+        # self.bandit.PlotRegret("/home/maryna/HSE/Bandits/TensorBandits/context_algs/ens_samp_givenX_only.png")
 
 
 

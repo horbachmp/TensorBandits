@@ -2,6 +2,8 @@ import numpy as np
 from itertools import product
 from tqdm import tqdm
 import random
+from tensorly.decomposition import tucker
+import itertools
 
 from utils.tensor import *
 from utils.bandit import *
@@ -28,7 +30,7 @@ class TensorEpochGreedy:
 
     def ExploreStep(self, arm):
         self.steps_done += 1
-        reward = self.bandit.PlayArm(arm, arm[:self.num_context_dims])
+        reward = self.bandit.PlayArm(tuple(arm))
         # print("reward", reward)
         arm_tensor = np.zeros(self.dimensions, dtype=int)
         arm_tensor[tuple(arm)] = 1
@@ -39,7 +41,7 @@ class TensorEpochGreedy:
 
     def ExploitStep(self, arm):
         self.steps_done += 1
-        reward = self.bandit.PlayArm(arm, arm[:self.num_context_dims])
+        reward = self.bandit.PlayArm(tuple(arm))
         arm_tensor = np.zeros(self.dimensions, dtype=int)
         arm_tensor[tuple(arm)] = 1
         self.Reward_vec_sum += arm_tensor * reward
@@ -81,12 +83,14 @@ class TensorEpochGreedy:
 
 
     def PlayAlgo(self):
+        all_combinations = list(itertools.product(*[range(dim) for dim in self.dimensions[self.num_context_dims:]]))
         #exploration
         for step in range(self.explore_steps):
-            arm = np.random.randint(0, high=self.dimensions, size=len(self.dimensions))
-            # print("curr_arm", arm)
+            np.random.shuffle(all_combinations)
+            arm = all_combinations[0]
+            context = self.bandit.GetContext(self.dimensions[:self.num_context_dims])
+            arm = np.concatenate([context, arm])
             self.ExploreStep(arm)
-            # print("Estimation", self.Reward_vec_est)
         tmp_num_pulls = self.num_pulls
         tmp_num_pulls[tmp_num_pulls == 0] = 1
         Rew_vec_ini = self.Reward_vec_sum / tmp_num_pulls
@@ -101,44 +105,29 @@ class TensorEpochGreedy:
             ind += 1
         # reduction
         for k in tqdm(range(self.explore_steps, self.total_steps)):
-            context_dims = self.dimensions[:self.num_context_dims]
-            context = np.array([random.randint(0, dim - 1) for dim in context_dims])
+            context = self.bandit.GetContext(self.dimensions[:self.num_context_dims])
             current_arm = self.FindBestCurrArm(context)
             current_arm_tensor = self.CreateArmTensorByIndex(current_arm)
             reward = self.ExploitStep(current_arm)
             self.UpdateEstimation()
-            R_estim = self.Reward_vec_est
-            # print(np.unravel_index(np.argmax(R_estim[0]), R_estim[0].shape))
-            # print(np.unravel_index(np.argmax(R_estim[1]), R_estim[1].shape))
-            # print(np.unravel_index(np.argmax(R_estim[2]), R_estim[2].shape))
-        # R_estim = self.Reward_vec_est
-        # print(R_estim)
-        # print(np.unravel_index(np.argmax(R_estim[0]), R_estim[0].shape))
-        # print(np.unravel_index(np.argmax(R_estim[1]), R_estim[1].shape))
-        # print(np.unravel_index(np.argmax(R_estim[2]), R_estim[2].shape))
         
         # self.bandit.PlotRegret(self.img_name, algo_name="Epoch Greedy", plot_random=False)
 
 
 
 def main():
-    # seed = 42
-    # np.random.seed(seed)
-    X = np.array([    # title, subtitle, picture
-            [[2.9, 2.3, 2.3],
-             [2.7, 2.1, 2.1],
-             [3.6, 2.4, 2.4]],
-            [[3.4, 3.4, 2.8],
-             [3.2, 2.6, 2.6],
-             [3.5, 2.9, 2.9]],
-            [[1.4, 0.8, 0.8],
-             [1.2, 0.6, 0.6],
-             [1.5, 0.9, 0.9 ]]])
-    bandit = TensorBandit(X, 0.5)
-    algo = TensorEpochGreedy(dimensions=[3,3,3], ranks=[2,2,2], num_context_dims=1, bandit=bandit, img_name='/home/maryna/HSE/Bandits/TensorBandits/low_rank_algs/pictures/algs_new/epoch_greedy_only.png')
+    seed = 42
+    np.random.seed(seed)
+    num_context_dims=4
+    num_arms = 5
+    total_steps=5000
+    explore_steps = 1000
+    bandit = OpenBanditSimulator(num_context_dims, num_arms, 2 * total_steps)
+    dimensions=[4,4,4,4,num_arms]
+    ranks=[2,2,2,2,2]
+    algo = TensorEpochGreedy(dimensions=dimensions, ranks=ranks, num_context_dims=1, bandit=bandit, total_steps=total_steps, explore_steps=explore_steps)
     algo.PlayAlgo()
-    
-    # bandit = Bandit([3,3], [2,2])
+
     
 
 if __name__ == "__main__":
