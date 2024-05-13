@@ -29,7 +29,6 @@ class TensorEpochGreedy:
     def ExploreStep(self, arm):
         self.steps_done += 1
         reward = self.bandit.PlayArm(arm, arm[:self.num_context_dims])
-        # print("reward", reward)
         arm_tensor = np.zeros(self.dimensions, dtype=int)
         arm_tensor[tuple(arm)] = 1
         self.Reward_vec_sum += arm_tensor * reward
@@ -84,9 +83,7 @@ class TensorEpochGreedy:
         #exploration
         for step in range(self.explore_steps):
             arm = np.random.randint(0, high=self.dimensions, size=len(self.dimensions))
-            # print("curr_arm", arm)
             self.ExploreStep(arm)
-            # print("Estimation", self.Reward_vec_est)
         tmp_num_pulls = self.num_pulls
         tmp_num_pulls[tmp_num_pulls == 0] = 1
         Rew_vec_ini = self.Reward_vec_sum / tmp_num_pulls
@@ -107,16 +104,6 @@ class TensorEpochGreedy:
             current_arm_tensor = self.CreateArmTensorByIndex(current_arm)
             reward = self.ExploitStep(current_arm)
             self.UpdateEstimation()
-            R_estim = self.Reward_vec_est
-            # print(np.unravel_index(np.argmax(R_estim[0]), R_estim[0].shape))
-            # print(np.unravel_index(np.argmax(R_estim[1]), R_estim[1].shape))
-            # print(np.unravel_index(np.argmax(R_estim[2]), R_estim[2].shape))
-        # R_estim = self.Reward_vec_est
-        # print(R_estim)
-        # print(np.unravel_index(np.argmax(R_estim[0]), R_estim[0].shape))
-        # print(np.unravel_index(np.argmax(R_estim[1]), R_estim[1].shape))
-        # print(np.unravel_index(np.argmax(R_estim[2]), R_estim[2].shape))
-        
         # self.bandit.PlotRegret(self.img_name, algo_name="Epoch Greedy", plot_random=False)
 
 
@@ -138,7 +125,6 @@ def main():
     algo = TensorEpochGreedy(dimensions=[3,3,3], ranks=[2,2,2], num_context_dims=1, bandit=bandit, img_name='/home/maryna/HSE/Bandits/TensorBandits/low_rank_algs/pictures/algs_new/epoch_greedy_only.png')
     algo.PlayAlgo()
     
-    # bandit = Bandit([3,3], [2,2])
     
 
 if __name__ == "__main__":

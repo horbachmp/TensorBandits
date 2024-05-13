@@ -115,11 +115,9 @@ class EnsembleSampling:
                     second_part /= self.prior_sigmas[U_index][row_index] ** 2
                     
                     new_models[model_idx][U_index + 1][row_index] = (np.linalg.pinv(first_part) @ second_part)[:,0]
-                # new_models[model_idx][U_index + 1] = np.apply_along_axis(normalize,0,new_models[model_idx][U_index + 1])
                 new_models[model_idx][U_index + 1], _ = np.linalg.qr(new_models[model_idx][U_index + 1])
             self.models = new_models
             self.Reward_vec_est = self.Reward_vec_sum / np.where(self.num_pulls == 0, 1, self.num_pulls)
-            # print("rewards:", self.Reward_vec_est)
             first_part = self.Reward_vec_est
             for U_ind in range(1, len(self.models[model_idx])):
                 first_part = marginal_multiplication(first_part, self.models[model_idx][U_ind].T, U_ind-1)
@@ -140,18 +138,6 @@ class EnsembleSampling:
                 self.arm_history[i].append(c)
             perturb_reward = self.Step(arm)
             self.reward_history.append(perturb_reward[0])
-            # if (step + 1) % self.print_every == 0:
-            #     print("ITERATION", step + 1,"model num:", model_idx)
-            #     print(R_estim)
-            #     # for U in self.models[model_idx][1:]:
-            #     #     print(np.sqrt(np.sum(U**2)))
-            #     print(np.unravel_index(np.argmax(R_estim[0]), R_estim[0].shape))
-            #     print(np.unravel_index(np.argmax(R_estim[1]), R_estim[1].shape))
-            #     print(np.unravel_index(np.argmax(R_estim[2]), R_estim[2].shape))
-        # print(R_estim)
-        # print(np.unravel_index(np.argmax(R_estim[0]), R_estim[0].shape))
-        # print(np.unravel_index(np.argmax(R_estim[1]), R_estim[1].shape))
-        # print(np.unravel_index(np.argmax(R_estim[2]), R_estim[2].shape))
         # self.bandit.PlotRegret("/home/maryna/HSE/Bandits/TensorBandits/context_algs/ens_samp_givenX_only.png")
 
 

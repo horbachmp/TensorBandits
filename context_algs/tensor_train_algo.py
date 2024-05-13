@@ -82,14 +82,6 @@ class TensorTrainAlgo:
             if step % self.update_each == 0:
                 self.UpdateEstimation()
             
-            
-        R_estim = get_tensor_from_tt(self.cores)
-        # print(R_estim)
-        # print(np.unravel_index(np.argmax(R_estim[0]), R_estim[0].shape))
-        # print(np.unravel_index(np.argmax(R_estim[1]), R_estim[1].shape))
-        # print(np.unravel_index(np.argmax(R_estim[2]), R_estim[2].shape))
-        # self.bandit.PlotRegret(self.img_name)
-
 
 
 
@@ -111,7 +103,6 @@ def main():
     dimensions = [3,3,3]
     # dimensions = [10, 10, 10]
     # X = np.random.rand(*dimensions)
-    # print(X)
     bandit = TensorBandit(X, 0.5)
     algo = TensorTrainAlgo(dimensions=dimensions, ranks=[1,1,1,1], num_context_dims=1, bandit=bandit) # ranks should be of len(dims) + 1 and starts and ends with 1
     algo.PlayAlgo()

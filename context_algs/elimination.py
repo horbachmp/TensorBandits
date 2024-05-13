@@ -1,7 +1,5 @@
 import numpy as np
 from tensorly.decomposition import tucker
-import tensorly as tl
-import math
 from scipy.linalg import null_space
 from itertools import product
 from sklearn.linear_model import Ridge
@@ -149,8 +147,6 @@ class TensorElimination:
                         delta = self.conf_int_len * np.sqrt((arm_tensor.T) @ self.V_t_inv @ (arm_tensor))
                         lower_bounds.append(value - delta)
                         upper_bounds.append((value + delta, arm))
-                # print(context, lower_bounds)
-                # print(self.all_arms)
                 curr_max = np.max(lower_bounds)
                 new_all_arms = {pair[1] for pair in upper_bounds if pair[0] > curr_max}
                 for arm in self.all_arms:
@@ -187,7 +183,7 @@ def main():
              [1.2, 0.6, 0.6],
              [1.5, 0.9, 0.9 ]]])
     bandit = TensorBandit(X, 0.5)
-    algo = TensorElimination(dimensions=[3,3,3], ranks=[2,2,2], num_context_dims=1, bandit=bandit, img_name='/home/maryna/HSE/Bandits/TensorBandits/low_rank_algs/pictures/algs_new/elim_only.png')
+    algo = TensorElimination(dimensions=[3,3,3], ranks=[2,2,2], num_context_dims=1, bandit=bandit)
     algo.PlayAlgo()
     
     

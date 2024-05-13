@@ -1,7 +1,5 @@
 import numpy as np
 from tensorly.decomposition import tucker
-import tensorly as tl
-import math
 from scipy.linalg import null_space
 from itertools import product
 from sklearn.linear_model import Ridge
@@ -69,7 +67,6 @@ class TensorElimination:
         norms = list()
         arms = list(self.all_arms)
         for arm in arms:
-            # print(arm[:self.num_context_dims], context)
             if np.all(np.array(arm[:self.num_context_dims]) == np.array(context)):
                 arm_vec = self.CreateArmTensorByIndex(arm)
                 norms.append(np.sqrt((arm_vec.T) @ self.V_t_inv @ (arm_vec)))
@@ -149,8 +146,6 @@ class TensorElimination:
                     if np.all(np.array(arm[:self.num_context_dims]) == np.array(context)):
                         arm_tensor = self.CreateArmTensorByIndex(arm)
                         value = np.dot(self.curr_beta, arm_tensor)
-                        # print(self.curr_beta.shape, arm_tensor.shape)
-                        # print(value)
                         delta = self.conf_int_len * np.sqrt((arm_tensor.T) @ self.V_t_inv @ (arm_tensor))
                         lower_bounds.append(value - delta)
                         upper_bounds.append((value + delta, arm))

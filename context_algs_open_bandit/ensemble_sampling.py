@@ -1,9 +1,6 @@
 import numpy as np
 import random
 from copy import deepcopy
-import obp
-from obp.dataset import OpenBanditDataset, SyntheticBanditDataset, logistic_reward_function
-import category_encoders as ce
 import itertools
 from tqdm import tqdm
 
